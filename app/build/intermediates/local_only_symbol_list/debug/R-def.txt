@@ -1,9 +1,15 @@
 R_DEF: Internal format may change without notice
 local
 color black
+color ic_launcher_background
 color white
+drawable backspace
+drawable custom_button
+drawable custom_button2
+drawable history
 drawable ic_launcher_background
 drawable ic_launcher_foreground
+id back_space
 id button_0
 id button_1
 id button_2
@@ -14,7 +20,6 @@ id button_6
 id button_7
 id button_8
 id button_9
-id button_ac
 id button_add
 id button_c
 id button_close_bracket
@@ -23,12 +28,25 @@ id button_equal
 id button_multiply
 id button_open_bracket
 id button_point
+id button_sign
 id button_subtract
 id buttons_layout
-id result_view
+id clear_history
+id equation_view
+id fifth_equation
+id first_equation
+id fourth_equation
+id history
+id history_delete
+id history_title
+id line
+id second_equation
 id solution_view
+id third_equation
 layout activity_main
+layout hisory_window
 mipmap ic_launcher
+mipmap ic_launcher_foreground
 mipmap ic_launcher_round
 string _3
 string app_name
