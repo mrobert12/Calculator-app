@@ -102,6 +102,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         equation_view.setText(equation);
         solution_view.setText(evaluate());
     }
+
+    /*handles user input in handleMaterialButtonClick and handleImageButtonClick making sure the input
+    * is a properly formatted equation*/
     private void handleMaterialButtonClick(MaterialButton button){
         String buttonText = button.getText().toString();
 
@@ -113,21 +116,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(equation.length()-2 >= 0){
             antepen = equation.charAt(equation.length()-2);
         }
+        /*prevents the first character being an operator*/
         if(equation.isEmpty() && !buttonText.equals("+/-") && isOperator(buttonText.charAt(0))){
             equation = "";
         }
+        /*prevents the user adding an operator after an open parenthesis*/
         else if(!buttonText.equals("+/-") && isOperator(buttonText.charAt(0)) && prev == '('){
             equation = equation;
         }
+        /*prevents user from placing two operators in a row*/
         else if(!buttonText.equals("+/-") && isOperator(prev) && isOperator(buttonText.charAt(0))){
             if(antepen != '(') {
                 equation = equation.substring(0, equation.length() - 1);
                 equation += buttonText;
             }
         }
+        /*handles decimal point when the equation is empty*/
         else if (buttonText.equals(".") && equation.isEmpty()){
             equation += "0.";
         }
+        /*handles the clear button*/
         else if(buttonText.equals("C")){
             equation = "";
             solution_view.setText("");
@@ -146,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         else if(buttonText.equals("+/-")){
             StringBuilder equationBuilder = new StringBuilder(equation);
+            /*inserts a negative sign and a parenthesis before any preceding numbers*/
             if(Character.isDigit(prev) || prev == '.'){
                 int i = equation.length() -1;
                 while(Character.isDigit(equation.charAt(i)) || equation.charAt(i) == '.'){
@@ -153,7 +162,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 equationBuilder.insert(i+1, "(-");
             }
-            else if(prev == '-' && equation.charAt(equation.length()-2) == '('){
+            /*remove negative sign if two are pressed in a row*/
+            else if(prev == '-' && antepen == '('){
                 equationBuilder.delete(equationBuilder.length()-2,equationBuilder.length());
             }
             else{
@@ -224,10 +234,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     equation1.setText(history.get(3));
                     break;
                 case 5: equation5.setText(history.get(0));
-                    equation4.setText(history.get(0));
-                    equation3.setText(history.get(1));
-                    equation2.setText(history.get(2));
-                    equation1.setText(history.get(3));
+                    equation4.setText(history.get(1));
+                    equation3.setText(history.get(2));
+                    equation2.setText(history.get(3));
+                    equation1.setText(history.get(4));
                     break;
                 default:
                     setClearHistory();
@@ -351,6 +361,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return stack.pop();
     }
 
+    /*helps in some input checking*/
     public Boolean isOperator(char last){
         return last == '+' || last == '-' || last == '*' || last == '/';
     }
@@ -364,21 +375,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return formatResult(a*b);
     }
     public String divide(double a, double b){
-
         return formatResult(a/b);
     }
+    /*format the output to avoid some rounding errors and to avoid text overflow on the GUI*/
     public String formatResult(double value){
         DecimalFormat df = new DecimalFormat("#.#####");
         df.setRoundingMode(RoundingMode.HALF_UP);
         return df.format(value);
     }
+    /* Handle the saving of*/
     private void addHistory(String equation){
         if(history.size() == 5){
             history.remove(4);
         }
         history.add(0,equation);
     }
-
+    /*precedence helps determine order of operations*/
     private int precedence(String operator){
         switch(operator){
             case "+":
@@ -391,6 +403,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return 0;
         }
     }
+    /*containsOperator helps in determining if the input needs evaluation*/
     private Boolean containsOperator(){
         for(int i = 0; i < equation.length();i++){
             if(isOperator(equation.charAt(i))){
