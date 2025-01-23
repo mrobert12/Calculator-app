@@ -13,21 +13,21 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import com.google.android.material.button.MaterialButton;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Stack;
+
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     TextView equation_view,solution_view,equation1,equation2,equation3,equation4,equation5;
-    MaterialButton buttonC,buttonOpenBracket,buttonCloseBracket,buttonDivide,button9,
-            button8,button7,button6,button5,button4,button3,button2,button1,button0,
-            buttonMultiply,buttonSubtract,buttonAdd,buttonEqual,buttonSign,buttonPoint;
-    ImageButton backSpace,buttonHistory;
+
     Dialog historyDialog;
     Button clearHistory;
     String equation = "";
     ArrayList<String> history = new ArrayList<>();
-    private View mainLayout;
-    private View historyLayout;
+
 
 
     @Override
@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         clearHistory = historyDialog.findViewById(R.id.clear_history);
         clearHistory.setOnClickListener(this);
         Window window = historyDialog.getWindow();
+        assert window != null;
         WindowManager.LayoutParams params = window.getAttributes();
         params.gravity = Gravity.TOP | Gravity.START;
         params.y = 700;
@@ -104,9 +105,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void handleMaterialButtonClick(MaterialButton button){
         String buttonText = button.getText().toString();
 
-        if (buttonText.equals(".") && equation.isEmpty()){
-            buttonText = "0.";
-            equation += buttonText;
+        char prev = ' ';
+        char antepen = ' ';
+        if (!equation.isEmpty()){
+            prev = equation.charAt(equation.length()-1);
+        }
+        if(equation.length()-2 >= 0){
+            antepen = equation.charAt(equation.length()-2);
+        }
+        if(equation.isEmpty() && !buttonText.equals("+/-") && isOperator(buttonText.charAt(0))){
+            equation = "";
+        }
+        else if(!buttonText.equals("+/-") && isOperator(buttonText.charAt(0)) && prev == '('){
+            equation = equation;
+        }
+        else if(!buttonText.equals("+/-") && isOperator(prev) && isOperator(buttonText.charAt(0))){
+            if(antepen != '(') {
+                equation = equation.substring(0, equation.length() - 1);
+                equation += buttonText;
+            }
+        }
+        else if (buttonText.equals(".") && equation.isEmpty()){
+            equation += "0.";
         }
         else if(buttonText.equals("C")){
             equation = "";
@@ -125,21 +145,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             setClearHistory();
         }
         else if(buttonText.equals("+/-")){
-            if(!equation.isEmpty()){
-                char first = equation.charAt(0);
-                if(first == '-'){
-                    equation = equation.substring(1);
+            StringBuilder equationBuilder = new StringBuilder(equation);
+            if(Character.isDigit(prev) || prev == '.'){
+                int i = equation.length() -1;
+                while(Character.isDigit(equation.charAt(i)) || equation.charAt(i) == '.'){
+                    i--;
                 }
-                else{
-                    equation = '-' + equation;
-                }
+                equationBuilder.insert(i+1, "(-");
+            }
+            else if(prev == '-' && equation.charAt(equation.length()-2) == '('){
+                equationBuilder.delete(equationBuilder.length()-2,equationBuilder.length());
             }
             else{
-                equation = '-' + equation;
+                equationBuilder.append("(-");
             }
+            equation = equationBuilder.toString();
         }
         else if(buttonText.equals("(")){
-            if(!equation.isEmpty() && !isOperator(equation.charAt(equation.length()-1))){
+            if(!equation.isEmpty() && !isOperator(prev)){
                 equation += "*(";
             }
             else{
@@ -147,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         else if(buttonText.equals(")")){
-            if(equation.contains("(") && equation.charAt(equation.length()-1) != '('){
+            if(equation.contains("(") && prev != '(' && !isOperator(prev)){
                 equation += ')';
             }
         }
@@ -156,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 equation += '*';
             }
             equation += buttonText;
-            if(!equation.isEmpty() && !isOperator(equation.charAt(equation.length()-1)) && containsOperator()){
+            if(!isOperator(equation.charAt(equation.length()-1)) && containsOperator()){
                 solution_view.setText(evaluate());
             }
             else{
@@ -213,6 +236,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             historyDialog.show();
         }
     }
+    /* setClearHistory removes any stored equations the user may have input*/
     public void setClearHistory(){
         equation5.setText("");
         equation4.setText("");
@@ -220,13 +244,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         equation2.setText("");
         equation1.setText("");
     }
-
+    /* toPostfix converts the string equation input by user to a postfix equation for easier
+    *  processing and correct order of operations*/
     public ArrayList<String> toPostfix(){
-        Stack<String> stack = new Stack<String>();
+        Stack<String> stack = new Stack<>();
         char[] eq = equation.toCharArray();
-        ArrayList<String> postfix = new ArrayList<String>();
-        String number = "";
-        char topStack = ' ';
+        ArrayList<String> postfix = new ArrayList<>();
+        StringBuilder number = new StringBuilder();
         for(int i = 0; i < eq.length;i++){
             char element = eq[i];
             switch(element){
@@ -239,28 +263,40 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     stack.pop();
                     break;
-                case '*':
-                case '/':
-                    while (!stack.isEmpty() && (stack.peek().equals("*") || stack.peek().equals("/"))) {
-                        postfix.add(stack.pop());
-                    }
-                    stack.push(String.valueOf(element));
-                    break;
-                case '+':
                 case '-':
-                    while (!stack.isEmpty() && !stack.peek().equals("(")) {
+                    /*replaces a '-' which in this case is representing a negative number to
+                    * distinguish negative numbers from the minus sign, with '~'. Negative numbers
+                    * always have the open parenthesis before them which isn't accepted for operators*/
+                    if (eq[i-1] == '('){
+                        number.append('~');
+                        i++;
+                        while(i < eq.length && (Character.isDigit(eq[i]) || eq[i] == '.')){
+                            number.append(eq[i]);
+                            i++;
+                        }
+                        i--;
+                        postfix.add(number.toString());
+                        number = new StringBuilder();
+                        break;
+                    }
+                case '/':
+                case '+':
+                case '*':
+                    while (!stack.isEmpty() && precedence(stack.peek()) >= precedence(String.valueOf(element))) {
                         postfix.add(stack.pop());
                     }
                     stack.push(String.valueOf(element));
+
+
                     break;
                 default:
                     while(i < eq.length && (Character.isDigit(eq[i]) || eq[i] == '.')){
-                        number += eq[i];
+                        number.append(eq[i]);
                         i++;
                     }
                     i--;
-                    postfix.add(number);
-                    number = "";
+                    postfix.add(number.toString());
+                    number = new StringBuilder();
                     break;
             }
         }
@@ -270,30 +306,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 postfix.add(top);
             }
         }
-        for(int i = 0;i < postfix.size();i++){
-            Log.d("Postfix",postfix.get(i));
-        }
         return postfix;
     }
+    /*evaluate evaluates*/
     public String evaluate(){
         ArrayList<String> postfix = toPostfix();
         if(postfix == null){
             return "";
         }
-        Stack<String> stack = new Stack<String>();
+        Stack<String> stack = new Stack<>();
         for(int i = 0; i < postfix.size();i++){
-            if(!isOperator(postfix.get(i).charAt(0))){
-                stack.push(postfix.get(i));
+            String term = postfix.get(i);
+            if(!isOperator(term.charAt(0))){
+                /*convert the negative number, indicated by the ~, back to a minus sign*/
+                if(term.charAt(0) == '~') {
+                    StringBuilder string = new StringBuilder(term);
+                    string.replace(0,1,"-");
+                    term = string.toString();
+                }
+                stack.push(term);
             }
             else{
                 double num2 = Double.parseDouble(stack.pop());
                 double num1 = Double.parseDouble(stack.pop());
-                switch (postfix.get(i)) {
+                switch (term) {
                     case "+":
                         stack.push(addition(num1, num2));
                         break;
                     case "-":
-                        stack.push(subtract(num1, num2));
+                            stack.push(subtract(num1, num2));
                         break;
                     case "*":
                         stack.push(multiply(num1, num2));
@@ -307,29 +348,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         }
-
-        String result = stack.pop();
-        double numResult = Double.parseDouble((result));
-        if(numResult % 1 == 0){
-            result = Integer.toString((int)numResult);
-        }
-        return result;
+        return stack.pop();
     }
 
     public Boolean isOperator(char last){
         return last == '+' || last == '-' || last == '*' || last == '/';
     }
     public String addition(double a, double b){
-        return Double.toString(a+b);
+        return formatResult(a+b);
     }
     public String subtract(double a, double b){
-        return Double.toString(a-b);
+        return formatResult(a-b);
     }
     public String multiply(double a, double b){
-        return Double.toString(a*b);
+        return formatResult(a*b);
     }
     public String divide(double a, double b){
-        return Double.toString(a/b);
+
+        return formatResult(a/b);
+    }
+    public String formatResult(double value){
+        DecimalFormat df = new DecimalFormat("#.#####");
+        df.setRoundingMode(RoundingMode.HALF_UP);
+        return df.format(value);
     }
     private void addHistory(String equation){
         if(history.size() == 5){
@@ -338,6 +379,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         history.add(0,equation);
     }
 
+    private int precedence(String operator){
+        switch(operator){
+            case "+":
+            case "-":
+                return 1;
+            case "*":
+            case "/":
+                return 2;
+            default:
+                return 0;
+        }
+    }
     private Boolean containsOperator(){
         for(int i = 0; i < equation.length();i++){
             if(isOperator(equation.charAt(i))){
