@@ -3,7 +3,7 @@
 </div>
 
 # Calculator-app  
- ### *Created by [Michel Robert](mywebsite.com)*
+ ### *Created by [Michel Robert](https://mrobert12.github.io/Michel-Robert/)*
 
  ---
 
@@ -36,4 +36,4 @@
 </div>
 
 ## Credits
-Created with ❤️ by [Michel Robert](https://yourwebsite.com).  
+Created with ❤️ by [Michel Robert](https://mrobert12.github.io/Michel-Robert/).  
